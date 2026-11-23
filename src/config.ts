@@ -5,7 +5,7 @@
  * 用户注册 OAuth App（勾选 Enable Device Flow）后把 Client ID 填到 DEFAULT_CLIENT_ID，
  * 也可以在插件设置页临时覆盖（存本机 localStorage）。
  */
-export const DEFAULT_CLIENT_ID = '';
+export const DEFAULT_CLIENT_ID = 'Ov23liWnriu0zJgpEyAm';
 export const OAUTH_SCOPES = 'repo, read:user';
 
 export const API_BASE = 'https://api.github.com';
