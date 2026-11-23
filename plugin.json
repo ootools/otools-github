@@ -1,0 +1,23 @@
+{
+  "uuid": "otools-github",
+  "packid": "otools-github",
+  "displayName": "GitHub",
+  "displayNameCN": "GitHub 仓库管理",
+  "developerName": "OTools",
+  "summary": "用官方 API 浏览、搜索与创建 GitHub 仓库，支持 OAuth 设备流登录、README 与文件树查看、Issue 浏览。",
+  "version": "0.1.0",
+  "minOtoolsVersion": "0.9.0",
+  "entry": "dist/index.html",
+  "devUrl": "http://127.0.0.1:6580",
+  "quickDev": true,
+  "logo": "logo.svg",
+  "icon": "🐙",
+  "hasAd": false,
+  "inPluginPurchase": false,
+  "key": ["github", "仓库", "repo", "issue", "git", "oauth", "代码托管"],
+  "openInBrowser": false,
+  "openMode": "panel",
+  "panelWidth": 1180,
+  "panelHeight": 800,
+  "openSourceUrl": "https://github.com/ootools/otools-github"
+}

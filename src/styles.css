@@ -1,0 +1,260 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--gh-bg);
+  color: var(--gh-text);
+  font-family: var(--otools-font-family, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 颜色令牌全部由本插件自持：独立仓库不加载宿主样式表，也不引 Element Plus 的
+   css-vars，暗色只需切 html.dark（由 src/theme.ts 维护）。
+   --gh-accent 由 theme.ts 按宿主强调色档位写入，这里是兜底默认值。 */
+:root {
+  --otools-font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  --gh-bg: #ffffff;
+  --gh-sidebar: #fafafa;
+  --gh-border: #e7e9ee;
+  --gh-border-soft: #f0f2f5;
+  --gh-border-strong: #d8dbe2;
+  --gh-text: #1f2329;
+  --gh-text-2: #4b5563;
+  --gh-text-3: #8a919f;
+  --gh-hover: #f4f6f9;
+  --gh-hover-strong: #eceff4;
+  --gh-fill: #f2f3f5;
+  /* 浮层（下拉面板 / 弹层）底色：必须不透明，且与页面底色有明暗差才能浮起来。 */
+  --gh-overlay: #ffffff;
+  --gh-accent: #2370c6;
+  --gh-active: color-mix(in srgb, var(--gh-accent) 9%, #ffffff);
+  --gh-success: #2f9e5f;
+  --gh-danger: #e34d59;
+  --gh-skeleton: #eceff4;
+  --gh-skeleton-shine: #f7f8fa;
+  color-scheme: light;
+}
+
+html.dark {
+  --gh-bg: #222224;
+  --gh-sidebar: #1c1c1e;
+  --gh-border: rgb(255 255 255 / 0.1);
+  --gh-border-soft: rgb(255 255 255 / 0.05);
+  --gh-border-strong: rgb(255 255 255 / 0.18);
+  --gh-text: rgb(255 255 255 / 0.92);
+  --gh-text-2: rgb(255 255 255 / 0.72);
+  --gh-text-3: rgb(255 255 255 / 0.48);
+  --gh-hover: rgb(255 255 255 / 0.07);
+  --gh-hover-strong: rgb(255 255 255 / 0.12);
+  --gh-fill: rgb(255 255 255 / 0.07);
+  /* 暗色下用比基底 #222224 略亮的抬升色，避免浮层和页面糊成一片。 */
+  --gh-overlay: #2c2c2e;
+  --gh-active: color-mix(in srgb, var(--gh-accent) 24%, transparent);
+  --gh-success: #4ec98a;
+  --gh-danger: #f4777f;
+  --gh-skeleton: rgb(255 255 255 / 0.07);
+  --gh-skeleton-shine: rgb(255 255 255 / 0.11);
+  color-scheme: dark;
+}
+
+html.dark .github-app .node-badge {
+  background: rgb(255 255 255 / 0.09);
+  color: #c9cdd4;
+}
+
+html.dark .mock-badge {
+  background: rgb(240 118 58 / 0.22);
+  color: #ffb489;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--gh-text-2);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.icon-button:hover {
+  background: var(--gh-hover);
+  color: var(--gh-text);
+}
+
+.icon-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.github-app *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.github-app *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.github-app *::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+  background-color: transparent;
+}
+
+.github-app *:hover::-webkit-scrollbar-thumb {
+  background-color: var(--gh-border-strong);
+}
+
+.github-app *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gh-text-3);
+}
+
+/* GitHub 正文 / 回复：content_rendered 经白名单清洗后由 v-html 插入，样式必须是全局的。 */
+.github-rich {
+  font-size: 13.5px;
+  line-height: 1.78;
+  color: var(--gh-text);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.github-rich > :first-child {
+  margin-top: 0;
+}
+
+.github-rich > :last-child {
+  margin-bottom: 0;
+}
+
+.github-rich p {
+  margin: 0 0 12px;
+}
+
+.github-rich a {
+  color: var(--gh-accent);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.github-rich a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.github-rich img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 10px 0;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
+.github-rich strong,
+.github-rich b {
+  font-weight: 600;
+}
+
+.github-rich blockquote {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--gh-border-strong);
+  border-radius: 0 6px 6px 0;
+  background: var(--gh-fill);
+  color: var(--gh-text-2);
+}
+
+.github-rich ul,
+.github-rich ol {
+  margin: 0 0 12px;
+  padding-inline-start: 22px;
+}
+
+.github-rich li {
+  margin: 3px 0;
+}
+
+.github-rich code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--gh-fill);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.github-rich pre {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--gh-fill);
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.github-rich pre code {
+  padding: 0;
+  background: none;
+}
+
+.github-rich h1,
+.github-rich h2,
+.github-rich h3,
+.github-rich h4,
+.github-rich h5,
+.github-rich h6 {
+  margin: 18px 0 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.github-rich hr {
+  margin: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--gh-border);
+}
+
+.github-rich table {
+  width: 100%;
+  margin: 12px 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.github-rich th,
+.github-rich td {
+  padding: 5px 8px;
+  border: 1px solid var(--gh-border);
+  text-align: start;
+}
+
+.github-rich th {
+  background: var(--gh-fill);
+  font-weight: 600;
+}
+
+.github-rich .reply-content,
+.github-rich.reply-content {
+  font-size: 12.5px;
+}
