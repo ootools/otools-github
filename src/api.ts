@@ -298,10 +298,25 @@ export function fetchRepo(owner: string, repo: string): Promise<GitHubRepo> {
   return getJson<GitHubRepo>(`${API_BASE}${repoPath(owner, repo)}`);
 }
 
-/** README 的渲染 HTML。GitHub 对 Accept: application/vnd.github.html+json 返回 HTML 文本。 */
+/** GitHub 的 html+json 响应有时是裸 HTML，有时是带 body_html 字段的 JSON，统一取出 HTML。 */
+const extractHtml = (text: string): string => {
+  const trimmed = String(text ?? '').trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as { body_html?: string; content?: string };
+      if (typeof parsed.body_html === 'string') return parsed.body_html;
+    } catch {
+      // fall through
+    }
+  }
+  return trimmed;
+};
+
+/** README 的渲染 HTML。 */
 export function fetchReadmeHtml(owner: string, repo: string, ref?: string): Promise<string> {
   const url = `${API_BASE}${repoPath(owner, repo)}/readme${query({ ref })}`;
-  return getText(url, { accept: 'application/vnd.github.html+json' });
+  return getText(url, { accept: 'application/vnd.github.html+json' }).then(extractHtml);
 }
 
 export function fetchContents(owner: string, repo: string, path: string, ref?: string): Promise<GitHubContent[]> {
@@ -347,7 +362,7 @@ export function fetchIssueComments(owner: string, repo: string, number: number):
 export function fetchIssueHtml(owner: string, repo: string, number: number): Promise<string> {
   return getText(`${API_BASE}${repoPath(owner, repo)}/issues/${number}`, {
     accept: 'application/vnd.github.html+json',
-  });
+  }).then(extractHtml);
 }
 
 export function fetchIssueCommentsHtml(owner: string, repo: string, number: number): Promise<string[]> {
@@ -356,15 +371,18 @@ export function fetchIssueCommentsHtml(owner: string, repo: string, number: numb
   }).then((text) => {
     const trimmed = text.trim();
     if (!trimmed) return [];
-    // html+json 对列表返回的是 HTML 片段数组（JSON 字符串数组），容错处理。
     if (trimmed.startsWith('[')) {
       try {
-        const parsed = JSON.parse(trimmed) as string[];
-        if (Array.isArray(parsed)) return parsed;
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) =>
+            typeof item === 'string' ? item : (item as { body_html?: string } | null)?.body_html ?? '',
+          );
+        }
       } catch {
         // fall through
       }
     }
-    return [trimmed];
+    return [extractHtml(trimmed)];
   });
 }
