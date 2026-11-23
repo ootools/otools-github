@@ -13,6 +13,7 @@ import type {
   GitHubContent,
   GitHubIssue,
   GitHubRepo,
+  GitHubSearchResult,
   GitHubUser,
   RepoForm,
 } from './types';
@@ -37,6 +38,9 @@ export class GitHubApiError extends Error {
 
 export const rateRemaining = ref<number | null>(null);
 export const rateLimit = ref<number | null>(null);
+/** Search API 使用独立速率桶（带 token 30/min，匿名 10/min），与 core 5000/h 分开显示。 */
+export const searchRateRemaining = ref<number | null>(null);
+export const searchRateLimit = ref<number | null>(null);
 
 export type HttpMethod = 'GET' | 'POST' | 'DELETE';
 export type BodyType = 'none' | 'json' | 'form' | 'text';
@@ -63,6 +67,8 @@ export interface RequestOptions {
   timeoutSecs?: number;
   /** 允许在 mock 模式下命中假数据。 */
   mockable?: boolean;
+  /** 响应头里的 X-RateLimit-* 属于哪个桶。 */
+  rateScope?: 'core' | 'search';
 }
 
 const devMockEnabled = (): boolean => {
@@ -89,11 +95,13 @@ const toHeaderMap = (items: Array<{ key: string; value: string }> | undefined): 
   return headers;
 };
 
-const trackRateLimit = (headers: Record<string, string>): void => {
+const trackRateLimit = (headers: Record<string, string>, scope: 'core' | 'search' = 'core'): void => {
   const remaining = Number(headers['x-ratelimit-remaining'] ?? headers['x-rate-limit-remaining']);
   const limit = Number(headers['x-ratelimit-limit'] ?? headers['x-rate-limit-limit']);
-  if (Number.isFinite(remaining) && remaining >= 0) rateRemaining.value = remaining;
-  if (Number.isFinite(limit) && limit > 0) rateLimit.value = limit;
+  const remainingRef = scope === 'search' ? searchRateRemaining : rateRemaining;
+  const limitRef = scope === 'search' ? searchRateLimit : rateLimit;
+  if (Number.isFinite(remaining) && remaining >= 0) remainingRef.value = remaining;
+  if (Number.isFinite(limit) && limit > 0) limitRef.value = limit;
 };
 
 const buildHeaders = (options: RequestOptions, includeAuth: boolean): Array<{ key: string; value: string; enabled: boolean }> => {
@@ -206,7 +214,7 @@ const send = async (url: string, options: RequestOptions = {}): Promise<HttpResu
     const message = error instanceof Error ? error.message : String(error);
     throw new GitHubApiError('network', 'network request failed', { detail: message });
   }
-  trackRateLimit(result.headers);
+  trackRateLimit(result.headers, options.rateScope);
   assertStatus(result);
   return result;
 };
@@ -290,6 +298,26 @@ export function createRepo(form: RepoForm): Promise<GitHubRepo> {
     bodyType: 'json',
     body: JSON.stringify(payload),
   });
+}
+
+/* ------------------------------ 公共仓库检索 / 排名 ------------------------------ */
+
+export interface SearchReposOptions {
+  q: string;
+  sort?: 'stars' | 'forks' | 'updated' | 'best-match';
+  order?: 'desc' | 'asc';
+  page?: number;
+  perPage?: number;
+}
+
+/**
+ * GitHub Search API：`q` 里的限定符由 search-query.ts 构造。
+ * 带 token 时限额 30/min，匿名 10/min；搜索索引只覆盖公开仓库。
+ */
+export function fetchSearchRepos(options: SearchReposOptions): Promise<GitHubSearchResult> {
+  const { q, sort, order, page = 1, perPage = 30 } = options;
+  const params = query({ q, sort: sort === 'best-match' ? undefined : sort ?? undefined, order: sort ? (order ?? 'desc') : undefined, page, per_page: perPage });
+  return getJson<GitHubSearchResult>(`${API_BASE}/search/repositories${params}`, { rateScope: 'search' });
 }
 
 /* ------------------------------ 仓库详情（只读） ------------------------------ */

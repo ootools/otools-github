@@ -1,11 +1,15 @@
 # OTools GitHub 插件
 
-在 OTools 里用 GitHub 官方 REST API v3 浏览与管理自己的仓库：OAuth 设备流登录、
-仓库列表/新建仓库为主，仓库详情（README + 文件树，只读）与 Issue 查看为辅。
+在 OTools 里用 GitHub 官方 REST API v3 浏览与管理仓库：公共仓库排行榜与检索免登录，
+自己的仓库用 OAuth 设备流登录管理；仓库详情（README + 文件树，只读）与 Issue 查看为辅。
 所有请求走宿主 HTTP 通道以复用「设置 → 代理」，国内网络下无需在插件里单独配代理。
 
-## 功能（v0.1）
+## 功能（v0.2）
 
+- **排行榜（免登录）**：星标总榜 / 近期热门双榜页内切换，近期热门支持语言、时间范围、
+  创建/推送日期字段与最低星标筛选。基于官方 Search API（`sort=stars` + 日期限定符），
+  非第三方 trending 接口。
+- **仓库检索（免登录）**：关键词 + 语言 + 排序（最佳匹配 / 星标 / 更新时间），服务端分页。
 - **OAuth 设备流登录**：系统浏览器打开 `github.com/login/device`，输入 user code 授权，
   插件轮询换取 token 并存本机 localStorage。支持登出与撤销引导。
 - **仓库列表**：`GET /user/repos`，名称过滤、`all/owner/private/public` 筛选、分页，
@@ -17,8 +21,8 @@
 - **设置页**：client_id 覆盖、授权信息（登录名 / scopes / rate limit）、登出。
 - **离线预览**：`?mock=1` 全功能假数据。
 
-> v0.1 不支持：创建/评论 issue、star/fork/watch、文件编辑、PR、gist、组织仓库管理、
-> GitHub Enterprise、clone/push。
+> 不支持：创建/评论 issue、star/fork/watch、文件编辑、PR、gist、组织仓库管理、
+> GitHub Enterprise、clone/push。搜索 API 每用户/分钟有独立限额（登录 30、匿名 10）。
 
 ## 开发
 

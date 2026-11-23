@@ -95,7 +95,28 @@ export interface RepoForm {
   license_template: string;
 }
 
+export interface GitHubSearchResult {
+  total_count: number;
+  incomplete_results?: boolean;
+  items: GitHubRepo[];
+}
+
+export type RankingMode = 'total' | 'recent';
+export type TimeRange = 'week' | 'month' | 'year';
+export type RankDateField = 'created' | 'pushed';
+export type SearchSort = 'best-match' | 'stars' | 'updated';
+
+export interface RankingOptions {
+  mode: RankingMode;
+  language?: string;
+  range?: TimeRange;
+  dateField?: RankDateField;
+  minStars?: number;
+}
+
 export type View =
+  | { kind: 'rankings'; mode?: RankingMode; language?: string; range?: TimeRange }
+  | { kind: 'search'; q?: string; language?: string }
   | { kind: 'repos' }
   | { kind: 'new-repo' }
   | { kind: 'repo'; owner: string; repo: string; path?: string }

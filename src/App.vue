@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { createRepo as apiCreateRepo, fetchRepos, GitHubApiError, rateLimit, rateRemaining, type RepoSort, type RepoType } from './api';
+import { createRepo as apiCreateRepo, fetchRepos, GitHubApiError, rateLimit, rateRemaining, searchRateLimit, searchRateRemaining, type RepoSort, type RepoType } from './api';
 import { authError, authStatus, currentUser, handleUnauthorized, isAuthenticated, restoreSession, signOut } from './auth';
 import { formatCount } from './format';
 import { useGitHubI18n } from './i18n';
@@ -13,6 +13,8 @@ import LoginView from './components/LoginView.vue';
 import NewRepoView from './components/NewRepoView.vue';
 import RepoDetail from './components/RepoDetail.vue';
 import RepoList from './components/RepoList.vue';
+import RankingsView from './components/RankingsView.vue';
+import SearchView from './components/SearchView.vue';
 
 const { t, direction } = useGitHubI18n();
 
@@ -20,7 +22,7 @@ const isMock = import.meta.env.DEV && typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).has('mock');
 
 const rootRef = ref<HTMLElement | null>(null);
-const view = ref<View>({ kind: 'repos' });
+const view = ref<View>({ kind: 'rankings' });
 const narrow = ref(false);
 const sidebarOpen = ref(false);
 
@@ -34,10 +36,31 @@ const filter = ref<{ type: RepoType; sort: RepoSort }>({ type: 'owner', sort: 'u
 const newRepoBusy = ref(false);
 const newRepoError = ref('');
 
-const showLogin = computed(() => !isMock && !isAuthenticated.value && authStatus.value !== 'checking');
+// 公开浏览 / 检索 / 排名 / 公开仓库详情与 Issue 都不需要登录；只有「我的仓库」等私有视图需要。
+const privateViews = new Set<View['kind']>(['repos', 'new-repo', 'settings']);
+const showLogin = computed(() =>
+  !isMock && authStatus.value !== 'checking' && !isAuthenticated.value && privateViews.has(view.value.kind),
+);
 const rateText = computed(() => {
   if (rateRemaining.value === null) return '';
   return t('rateLimit', { remaining: rateRemaining.value, limit: rateLimit.value ?? '—' });
+});
+const searchRateText = computed(() => {
+  if (searchRateRemaining.value === null) return '';
+  return t('rateLimit', { remaining: searchRateRemaining.value, limit: searchRateLimit.value ?? '—' });
+});
+
+const barSub = computed(() => {
+  switch (view.value.kind) {
+    case 'rankings': return t('navRankings');
+    case 'search': return t('navSearch');
+    case 'repos': return t('navRepos');
+    case 'new-repo': return t('newRepo');
+    case 'issues':
+    case 'issue': return t('navIssues');
+    case 'settings': return t('navSettings');
+    default: return t('navRepos');
+  }
 });
 
 const errorTextFor = (error: unknown): string => {
@@ -77,11 +100,20 @@ const changeFilter = (next: { type: RepoType; sort: RepoSort }): void => {
   void loadRepos(true);
 };
 
-const navigate = (next: View): void => {
+const backView = ref<View>({ kind: 'rankings' });
+
+const setView = (next: View): void => {
   view.value = next;
   sidebarOpen.value = false;
   if (next.kind === 'repos' && !repos.value.length) void loadRepos(true);
 };
+
+const navigate = (next: View): void => {
+  backView.value = view.value;
+  setView(next);
+};
+
+const goBack = (): void => setView(backView.value);
 
 const openRepo = (repo: GitHubRepo): void => {
   const [owner, name] = repo.full_name.split('/');
@@ -173,18 +205,22 @@ watch(authStatus, (status) => {
         </button>
         <div class="bar-title">
           <strong>{{ t('appName') }}</strong>
-          <span class="bar-sub">{{ view.kind === 'repos' ? t('navRepos') : view.kind === 'issues' || view.kind === 'issue' ? t('navIssues') : view.kind === 'settings' ? t('navSettings') : t('newRepo') }}</span>
+          <span class="bar-sub">{{ barSub }}</span>
         </div>
         <span v-if="isMock" class="mock-badge">{{ t('mockHint') }}</span>
         <div class="bar-spacer" />
         <button v-if="view.kind === 'repos'" class="icon-button" type="button" :title="t('refresh')" @click="refreshCurrent">
           <AppIcon name="refresh" :size="15" />
         </button>
+        <button v-if="!currentUser && !isMock" class="sign-in" type="button" @click="navigate({ kind: 'repos' })">
+          <AppIcon name="user" :size="13" /> {{ t('signIn') }}
+        </button>
         <div v-if="currentUser" class="bar-account">
           <span class="bar-avatar">{{ currentUser.login.slice(0, 1).toUpperCase() }}</span>
           <span class="bar-login">{{ currentUser.login }}</span>
         </div>
         <div v-if="rateText" class="bar-rate">{{ rateText }}</div>
+        <div v-if="searchRateText" class="bar-rate">{{ searchRateText }}</div>
       </header>
 
       <div class="app-body">
@@ -201,6 +237,21 @@ watch(authStatus, (status) => {
         />
 
         <main class="app-main">
+          <RankingsView
+            v-if="view.kind === 'rankings'"
+            :t="t"
+            :initial-mode="view.mode"
+            :initial-language="view.language"
+            :initial-range="view.range"
+            @open="openRepo"
+          />
+          <SearchView
+            v-else-if="view.kind === 'search'"
+            :t="t"
+            :initial-q="view.q"
+            :initial-language="view.language"
+            @open="openRepo"
+          />
           <RepoList
             v-if="view.kind === 'repos'"
             :t="t"
@@ -228,7 +279,7 @@ watch(authStatus, (status) => {
             :owner="view.owner"
             :repo="view.repo"
             :path="view.path"
-            @back="navigate({ kind: 'repos' })"
+            @back="goBack"
             @open-issues="navigate({ kind: 'issues', owner: view.owner, repo: view.repo })"
           />
           <IssueList
@@ -239,7 +290,7 @@ watch(authStatus, (status) => {
             :repos="repos"
             @open="openIssue"
             @select-repo="(owner, repo) => navigate({ kind: 'issues', owner, repo })"
-            @back="navigate({ kind: 'repos' })"
+            @back="goBack"
           />
           <IssueDetail
             v-else-if="view.kind === 'issue'"
@@ -259,6 +310,7 @@ watch(authStatus, (status) => {
         <span v-if="currentUser">{{ t('signedInAs', { user: currentUser.login }) }}</span>
         <span v-else>{{ t('notSignedIn') }}</span>
         <span v-if="rateText" class="status-rate">· {{ rateText }}</span>
+        <span v-if="searchRateText" class="status-rate">· {{ t('navSearch') }} {{ searchRateText }}</span>
       </footer>
     </template>
   </div>
@@ -271,6 +323,8 @@ watch(authStatus, (status) => {
 .bar-title strong { font-size: 13px; font-weight: 650; }
 .bar-sub { font-size: 11px; color: var(--gh-text-3); }
 .bar-spacer { flex: 1; }
+.sign-in { display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 10px; border: 1px solid var(--gh-accent); border-radius: 7px; background: transparent; color: var(--gh-accent); font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.sign-in:hover { background: var(--gh-active); }
 .bar-account { display: flex; align-items: center; gap: 6px; }
 .bar-avatar { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--gh-accent); color: #fff; font-size: 10px; font-weight: 700; }
 .bar-login { font-size: 11.5px; color: var(--gh-text-2); }

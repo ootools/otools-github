@@ -35,6 +35,14 @@ const accountLabel = computed(() => props.user?.login ?? '');
     </button>
 
     <nav class="nav">
+      <button class="nav-item" :class="{ active: active('rankings') }" type="button" @click="emit('navigate', { kind: 'rankings' })">
+        <AppIcon name="fire" :size="16" />
+        <span>{{ props.t('navRankings') }}</span>
+      </button>
+      <button class="nav-item" :class="{ active: active('search') }" type="button" @click="emit('navigate', { kind: 'search' })">
+        <AppIcon name="search" :size="16" />
+        <span>{{ props.t('navSearch') }}</span>
+      </button>
       <button class="nav-item" :class="{ active: active('repos') || active('repo') }" type="button" @click="emit('navigate', { kind: 'repos' })">
         <AppIcon name="repo" :size="16" />
         <span>{{ props.t('navRepos') }}</span>
